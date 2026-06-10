@@ -1,25 +1,33 @@
-"""Build PhiHER2-style hierarchical AP prototypes from training-fold patch features.
+"""Build hierarchical prototypes (per-slide AP + global condensation) from training folds.
 
-Stage 1: AP on each slide's subsampled patches → slide exemplars (c_i per slide).
-Stage 2: AP on pooled slide exemplars → L global prototype vectors (data-driven L).
+Stage 1 (always AP): AP on each slide's subsampled patches → slide exemplars (real
+patch medoids). Follows PhiHER2 ``utils/cluster_utils.py`` + ``cfgs/HEROHE.yaml``: PMIL
+similarity ``exp(-λ·d/max(d))``, ``preference=0``, ``damping=0.5``, up to 5000
+patches/slide.
 
-Implementation follows PhiHER2 ``utils/cluster_utils.py`` + ``cfgs/HEROHE.yaml``:
-PMIL similarity ``exp(-λ·d/max(d))``, ``preference=0``, ``damping=0.5``, up to
-5000 patches/slide (``num_perslide`` in their config).
+Stage 2 (``--stage2_method``): condense pooled stage-1 exemplars into the global
+prototype set — either ``kmeans`` (exactly K = ``--target_L`` centers) or ``ap`` (a
+second AP pass, data-driven L).
+
+REPORTED RESULTS: the run scripts always pass ``--stage2_method kmeans --target_L L``
+(L = 8 primary; L ∈ {4, 8, 16} for the prototype-count ablation). So the prototypes
+used for the reported tables are Stage-1 AP → Stage-2 MiniBatchKMeans(K = L). The
+``ap`` stage-2 path is the PhiHER2-faithful variant, retained for reference but not
+used for the reported numbers. (The CLI default is ``ap``; the run scripts override it.)
 
 Run on **training slides only** (single CSV or one CV fold's train split). Output .pt
-is loaded by ``train_phenobin_mil.py --prototypes``; AP prototypes are frozen by default
-(Cluster-PT).
+is loaded by ``train_phenobin_mil.py --prototypes``; prototypes are frozen by default
+(PhiHER2 Cluster-PT).
 
 Examples
 --------
-Fold 0 train pool (288 slides, no val leakage):
+Reported recipe — fold 0 train pool, k-means stage-2 to exactly L=8 (no val leakage):
 
     python herohe/gp2/scripts/init_prototypes_ap.py \\
         --features_dir .../features_virchow2 \\
-        --folds_csv herohe/gp2/data/folds_v1.csv \\
-        --val_fold 0 \\
-        --output herohe/gp2/data/prototypes_ap_fold0_train.pt
+        --folds_csv herohe/gp2/data/folds_phiher2_binary_s42.csv \\
+        --val_fold 0 --stage2_method kmeans --target_L 8 \\
+        --output herohe/gp2/data/prototypes_ap_phiher2fold_fold0_train_L8.pt
 """
 
 from __future__ import annotations
@@ -217,7 +225,10 @@ def main() -> None:
             "stage2_method": args.stage2_method,
         },
     )
-    print(f"[init_prototypes_ap] wrote {args.output}  (L={L}, method=hierarchical_ap)")
+    print(
+        f"[init_prototypes_ap] wrote {args.output}  "
+        f"(L={L}, stage1=ap, stage2={args.stage2_method})"
+    )
 
 
 if __name__ == "__main__":

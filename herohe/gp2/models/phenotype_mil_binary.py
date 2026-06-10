@@ -1,15 +1,31 @@
 """PhenoHER2-Binary: prototype MIL with configurable readout, 2-class head.
 
-Targets the **original HEROHE deployment label**: ISH-aligned Negative (0) vs Positive (1),
-not the 4-class IHC score.
+This is the model behind the reported results (binary HER2, and 3-class with
+``num_classes=3``). It targets the **original HEROHE deployment label**: ISH-aligned
+Negative (0) vs Positive (1) (and neg/low/pos for the 3-class task), not the 4-class
+IHC score.
 
-Readout modes (``PhenoHER2BinaryConfig.readout``):
-    ``full`` — soft-assign log-gate + K proto tokens + cross-proto Transformer + mean pool.
-    ``khead`` — K independent gated-attention pools → readout → CE.
-    ``khead_pool``: ``mean`` | ``concat`` | ``token_abmil`` (ABMIL over K phenotype tokens).
-    ``khead`` routing: ``independent`` (default), ``log_gate`` (log soft-assign gate),
-    or ``hard_partition`` (AttnMISL-style argmax routing; gated pool within each cluster only).
-    ``khead_abmil`` — (legacy) K pools + ABMIL branch; not recommended for prototype MIL.
+REPORTED CONFIGURATION (what the run scripts actually set)
+----------------------------------------------------------
+* ``readout="khead"`` with ``khead_pool="token_abmil"`` (primary) — ablations also use
+  ``khead_pool ∈ {mean, concat}``.
+* ``khead_routing="hard_partition"`` (primary) — ablation also uses ``"independent"``.
+* ``use_dual_stream=False`` (``--dual_stream 0``), ``proto_attn_bias=False``.
+* Sinkhorn balance and prototype orthogonality off (``--w_balance 0 --w_orth 0``),
+  attention-entropy reg off (``--w_attn_entropy 0``), bag mixup off.
+
+EXPERIMENTAL / NOT USED FOR THE REPORTED RESULTS (kept for reference)
+--------------------------------------------------------------------
+* ``readout="full"`` — the early soft-assign log-gate + cross-prototype Transformer
+  design (with ``head_bin_phen`` / ``proto_class_head``). Superseded by ``khead``.
+* The dual-stream "detail" AB-MIL branch + ``fusion_gate`` (only built when
+  ``use_dual_stream=True``); disabled in all reported runs.
+* ``khead_routing="log_gate"`` — intermediate routing variant (reported routing
+  ablation compares ``independent`` vs ``hard_partition`` only).
+* ``readout="khead_abmil"`` — legacy K-pools + extra AB-MIL branch.
+* ``InstSelector`` / ``mine_patches`` — PhiHER2-style top-k patch mining trial (off).
+* ``stkim_*`` — stochastic top-k instance-masking trial (off, ``stkim_p=0``).
+* ``use_spatial_block`` / ``use_cls_pool`` — optional blocks, off in all reported runs.
 """
 
 from __future__ import annotations
@@ -36,7 +52,9 @@ KheadRoutingMode = Literal["independent", "log_gate", "hard_partition"]
 
 
 class InstSelector(nn.Module):
-    """PhiHER2-style linear patch scorer: top-k by P(positive) on raw features."""
+    """[EXPERIMENTAL — patch-mining trial; ``mine_patches=0`` in the reported runs.]
+
+    PhiHER2-style linear patch scorer: top-k by P(positive) on raw features."""
 
     def __init__(self, in_dim: int):
         super().__init__()
@@ -53,30 +71,34 @@ class InstSelector(nn.Module):
 
 @dataclass
 class PhenoHER2BinaryConfig:
+    # NOTE: the dataclass defaults below are NOT the reported configuration (they reflect
+    # the early "full" design). The run scripts override them to the reported recipe:
+    # readout="khead", khead_pool="token_abmil", khead_routing="hard_partition",
+    # use_dual_stream=False, proto_attn_bias=False. See the module docstring.
     feature_dim: int = 2560
     hidden_dim: int = 384
     num_prototypes: int = 16
     attn_hidden_dim: int = 256
-    cross_proto_layers: int = 2
-    cross_proto_heads: int = 4
+    cross_proto_layers: int = 2  # "full" readout only (experimental)
+    cross_proto_heads: int = 4   # "full" readout only (experimental)
     dropout: float = 0.1
     init_temperature: float = 1.0
-    use_spatial_block: bool = False
+    use_spatial_block: bool = False  # experimental — off in reported runs
     spatial_block_heads: int = 4
-    use_cls_pool: bool = False
+    use_cls_pool: bool = False  # "full" readout only — off in reported runs
     patch_dropout: float = 0.0
-    use_dual_stream: bool = True
-    detail_attn_hidden: int = 256
-    num_classes: int = 2
-    readout: ReadoutMode = "full"
-    proto_attn_bias: bool = True
-    khead_pool: KheadPoolMode = "concat"
-    khead_routing: KheadRoutingMode = "independent"
+    use_dual_stream: bool = True  # experimental — set False (--dual_stream 0) in reported runs
+    detail_attn_hidden: int = 256  # dual-stream branch only (experimental)
+    num_classes: int = 2  # 2 (binary) or 3 (neg/low/pos)
+    readout: ReadoutMode = "full"  # reported runs use "khead"
+    proto_attn_bias: bool = True  # reported runs set False
+    khead_pool: KheadPoolMode = "concat"  # reported: "token_abmil" (primary), "mean"/"concat" (ablation)
+    khead_routing: KheadRoutingMode = "independent"  # reported: "hard_partition" (primary), "independent" (ablation)
     patch_attn_temperature: float = 1.0
-    stkim_p: float = 0.0
+    stkim_p: float = 0.0  # stochastic top-k instance masking — experimental, off
     stkim_k: int = 10
     stkim_frac: float = 0.0
-    mine_patches: int = 0
+    mine_patches: int = 0  # PhiHER2-style top-k patch mining — experimental, off
     mine_on_val: bool = False
 
 
@@ -463,6 +485,9 @@ class PhenoHER2Binary(nn.Module):
         h: torch.Tensor,
         mask: Optional[torch.Tensor],
     ) -> dict:
+        # [EXPERIMENTAL] Early "full" readout (log-gate + cross-prototype Transformer,
+        # optional dual-stream fusion). Superseded by the "khead" path; not used for the
+        # reported results.
         sim, tau = self._proto_similarity(h)
         sim_for_loss = sim.clone()
         if mask is not None:

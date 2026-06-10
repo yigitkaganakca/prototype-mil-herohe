@@ -101,12 +101,18 @@ bash herohe/gp2/scripts/run_trident_test_150.sh    # official 150-slide test set
 bash herohe/gp2/scripts/run_trident_resnet50_feat.sh
 ```
 
-**2. Prototype construction (affinity propagation on training-fold patches).**
+**2. Prototype construction (per-slide affinity propagation + k-means condensation).**
+
+Stage 1 runs affinity propagation on each training slide's patches (real-patch
+medoids); stage 2 condenses the pooled exemplars to exactly `L` global prototypes. The
+reported runs use k-means for stage 2 (`--stage2_method kmeans --target_L L`).
 
 ```bash
 python herohe/gp2/scripts/init_prototypes_ap.py \
-    --features_dir <features_virchow2> --folds_csv herohe/gp2/data/folds_v1.csv \
-    --val_fold 0 --output herohe/gp2/data/prototypes_ap_fold0_train.pt
+    --features_dir <features_virchow2> \
+    --folds_csv herohe/gp2/data/folds_phiher2_binary_s42.csv \
+    --val_fold 0 --stage2_method kmeans --target_L 8 \
+    --output herohe/gp2/data/prototypes_ap_phiher2fold_fold0_train_L8.pt
 ```
 
 **3. Train + test-ensemble eval (5-fold CV).**

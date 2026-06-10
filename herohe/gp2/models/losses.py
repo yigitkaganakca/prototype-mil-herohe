@@ -1,4 +1,28 @@
-"""Multi-task loss for PhenoHER2 v2.
+"""Loss functions for the prototype MIL models.
+
+WHAT THE REPORTED RESULTS ACTUALLY USE
+--------------------------------------
+The reported binary / 3-class model is trained with ``PhenoHER2BinaryLoss`` and, in the
+released run scripts, ONLY the class-weighted cross-entropy term is active: the run
+scripts pass ``--w_balance 0`` and ``--w_orth 0`` (and ``--w_attn_entropy 0``), so the
+Sinkhorn prototype-balance and prototype-orthogonality terms are switched off. In other
+words, the effective training objective is class-weighted CE (effective-number weights,
+Cui et al. 2019) with label smoothing.
+
+DEPRECATED / EXPERIMENTAL (kept for reference, NOT used for the reported numbers)
+--------------------------------------------------------------------------------
+* ``PhenoHER2Loss`` + ``LossWeights`` — the full v2 4-class multi-task objective
+  (EMD ordinal + 0-vs-1+ and 3+ aux heads + Sinkhorn balance + orthogonality). The v2
+  4-class model/trainer that consumed this was retired; this whole class is unused.
+* ``squared_emd_loss`` / ``soft_ordinal_target`` — ordinal (EMD²) trial. ``soft_ordinal_target``
+  is still imported by the binary trainer to build bag-mixup soft targets, but mixup is
+  disabled in the reported runs (``--mixup_alpha 0 --mixup_p 0``).
+* ``sinkhorn`` / ``sinkhorn_balance_loss`` — SwAV-style prototype-balance trial
+  (``w_balance`` weight); set to 0 in the reported runs.
+* ``prototype_orthogonality_loss`` — prototype-diversity trial (``w_orth`` weight);
+  set to 0 in the reported runs.
+
+Original v2 design notes follow.
 
 Components:
     1. Class-weighted Cross-Entropy on the 4-class head (FR6).
@@ -102,7 +126,9 @@ def soft_ordinal_target(
 
 
 def squared_emd_loss(probs: torch.Tensor, target_distribution: torch.Tensor) -> torch.Tensor:
-    """Squared Earth Mover's Distance loss for ordinal classification.
+    """[DEPRECATED — v2 ordinal trial; not used in the reported model.]
+
+    Squared Earth Mover's Distance loss for ordinal classification.
 
     L(p, q) = (1/(K-1)) * sum_{k=1..K-1} ( CDF_p(k) - CDF_q(k) )^2
 
@@ -136,7 +162,9 @@ def squared_emd_loss(probs: torch.Tensor, target_distribution: torch.Tensor) -> 
 
 @torch.no_grad()
 def sinkhorn(scores: torch.Tensor, n_iter: int = 3, epsilon: float = 0.05) -> torch.Tensor:
-    """SwAV-style Sinkhorn-Knopp normalisation.
+    """[DEPRECATED — prototype-balance trial; ``w_balance=0`` in the reported runs.]
+
+    SwAV-style Sinkhorn-Knopp normalisation.
 
     Args:
         scores: (N, K) raw assignment logits (e.g. cosine sim / tau).
@@ -172,7 +200,9 @@ def sinkhorn_balance_loss(
     n_iter: int = 3,
     epsilon: float = 0.05,
 ) -> torch.Tensor:
-    """SwAV-style cross-entropy between predicted assignment and the
+    """[DEPRECATED — prototype-balance trial; ``w_balance=0`` in the reported runs.]
+
+    SwAV-style cross-entropy between predicted assignment and the
     Sinkhorn-balanced target.
 
     Args:
@@ -219,7 +249,9 @@ def sinkhorn_balance_loss(
 
 
 def prototype_orthogonality_loss(prototypes: torch.Tensor) -> torch.Tensor:
-    """Penalise the off-diagonal cosine similarity of the K prototypes."""
+    """[DEPRECATED — prototype-diversity trial; ``w_orth=0`` in the reported runs.]
+
+    Penalise the off-diagonal cosine similarity of the K prototypes."""
     P = F.normalize(prototypes, dim=-1)
     G = P @ P.t()
     K = G.shape[0]
@@ -234,8 +266,9 @@ def prototype_orthogonality_loss(prototypes: torch.Tensor) -> torch.Tensor:
 
 @dataclass
 class LossWeights:
-    """Loss weights for PhenoHER2 v2.
+    """[DEPRECATED — weights for the unused v2 4-class ``PhenoHER2Loss``.]
 
+    Loss weights for PhenoHER2 v2.
     `emd` replaces `ordinal` (CORN) from v1.
     `balance` replaces `diversity` (entropy reg) from v1.
     """
@@ -249,7 +282,13 @@ class LossWeights:
 
 
 class PhenoHER2Loss(nn.Module):
-    """Multi-task loss for PhenoHER2 v2.
+    """[DEPRECATED — v2 4-class multi-task loss; NOT used for the reported results.]
+
+    The reported binary / 3-class model uses ``PhenoHER2BinaryLoss`` below. This class
+    (EMD ordinal + aux heads + Sinkhorn balance + orthogonality) was the v2 4-class
+    objective and is retained only for reference.
+
+    Multi-task loss for PhenoHER2 v2.
 
     Args:
         class_counts: per-class counts in the training fold for the CE weights.
@@ -357,11 +396,17 @@ class PhenoHER2Loss(nn.Module):
 
 @dataclass
 class BinaryLossWeights:
-    """Loss weights for PhenoHER2-Binary (no ordinal / aux heads)."""
+    """Loss weights for the reported binary / 3-class model.
+
+    NOTE: the dataclass defaults below enable balance/orthogonality, but the released
+    run scripts override them to 0 (``--w_balance 0 --w_orth 0``). For the reported
+    results only ``ce`` (class-weighted cross-entropy) is active; ``balance`` (Sinkhorn)
+    and ``orthogonality`` are deprecated trials left switched off.
+    """
 
     ce: float = 1.0
-    balance: float = 0.05
-    orthogonality: float = 0.01
+    balance: float = 0.05  # deprecated trial — set to 0 in the reported runs
+    orthogonality: float = 0.01  # deprecated trial — set to 0 in the reported runs
 
 
 class PhenoHER2BinaryLoss(nn.Module):

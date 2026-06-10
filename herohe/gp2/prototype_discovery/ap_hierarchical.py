@@ -1,15 +1,25 @@
-"""PhiHER2-style hierarchical Affinity Propagation for phenotype prototype discovery.
+"""Hierarchical prototype discovery: per-slide Affinity Propagation + global condensation.
 
-Matches the official PhiHER2 implementation (``utils/cluster_utils.py``):
+* Stage 1 (always AP): AP on each slide's patch embeddings → slide-level exemplar
+  features. Exemplars are **actual input feature vectors** at
+  ``cluster_centers_indices_`` (not sklearn ``cluster_centers_``), so they are real
+  patch medoids. Similarity is the PMIL form ``exp(-λ · d / max(d))`` on normalized
+  Euclidean distances, with ``affinity='precomputed'``, ``preference=0``,
+  ``damping=0.5`` (PhiHER2 HEROHE.yaml defaults). Reference: Yan et al., PhiHER2
+  (Bioinformatics 2024, btae236).
 
-* Stage 1: AP on each slide's patch embeddings → slide-level exemplar indices/features.
-* Stage 2: AP on the **union** of all stage-1 exemplars → data-driven L global prototypes.
-* Similarity: ``exp(-λ · d / max(d))`` on normalized Euclidean distances (PMIL-style).
-* AP: ``affinity='precomputed'``, ``preference=0``, ``damping=0.5`` (HEROHE.yaml defaults).
-* Exemplars are **actual input feature vectors** at ``cluster_centers_indices_``, not sklearn
-  ``cluster_centers_``.
+* Stage 2 (``stage2_method``): condense the pooled stage-1 exemplars to the global
+  prototype set. Two options are implemented:
+    - ``"kmeans"`` — MiniBatchKMeans to **exactly** K = ``target_L`` centers.
+    - ``"ap"``     — a second AP pass (data-driven L via preference search).
 
-Reference: Yan et al., PhiHER2 (Bioinformatics 2024, btae236).
+  IMPORTANT — what the reported results use: every run script invokes this with
+  ``--stage2_method kmeans --target_L L`` (L = 8 for the primary model; L ∈ {4, 8, 16}
+  for the prototype-count ablation). So the prototypes behind the reported tables are
+  **Stage 1 AP → Stage 2 MiniBatchKMeans (K = L)**. The ``stage2_method="ap"`` path is
+  the PhiHER2-faithful variant and is retained for reference but was not used to produce
+  the reported numbers. (Note: the default value of ``stage2_method`` is ``"ap"``; the
+  run scripts override it to ``"kmeans"``.)
 """
 
 from __future__ import annotations
@@ -236,13 +246,21 @@ def hierarchical_ap_prototypes(
     seed: int = 0,
     min_patches_per_slide: int = 8,
 ) -> HierarchicalAPResult:
-    """Discover global prototype centers from per-slide patch bags (two-stage AP).
+    """Discover global prototype centers from per-slide patch bags.
+
+    Stage 1 is always AP per slide; stage 2 is controlled by ``stage2_method``.
+    The reported results use ``stage2_method="kmeans"`` with ``target_L`` = K (see the
+    module docstring); ``stage2_method="ap"`` is the PhiHER2-faithful variant kept for
+    reference and is not used for the reported numbers.
 
     Args:
         slide_patches: mapping slide_id → (n, D) patch feature matrix (already subsampled).
         preference: AP preference for stage 1 (PhiHER2 HEROHE.yaml: 0).
-        stage2_preference: optional override for stage 2; defaults to ``preference``.
-        target_L: if set, grid-search stage-2 preference to approximate this L.
+        stage2_preference: optional override for stage-2 AP; defaults to ``preference``
+            (ignored when ``stage2_method="kmeans"``).
+        target_L: number of global prototypes. With ``kmeans`` it is the exact K; with
+            ``ap`` it grid-searches the stage-2 preference to approximate this L.
+        stage2_method: ``"kmeans"`` (reported) or ``"ap"`` (PhiHER2-faithful, unused).
         damping: AP damping in (0.5, 1] (PhiHER2: 0.5).
         lamb: PMIL similarity scale (PhiHER2 HEROHE.yaml: 0.25).
         min_patches_per_slide: skip slides with fewer patches.

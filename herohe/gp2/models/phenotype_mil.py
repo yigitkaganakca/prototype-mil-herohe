@@ -1,5 +1,14 @@
 """PhenoHER2 v2 -- Phenotype-aware Ordinal MIL with dual-stream gating.
 
+STATUS
+------
+The ``PhenoHER2`` class in this file is the SUPERSEDED v2 4-class design and is NOT used
+for the reported results — those come from ``PhenoHER2Binary`` in
+``phenotype_mil_binary.py``. This module is retained because the reported binary model
+imports its reusable building blocks ``GatedAttention`` and ``SimpleSpatialBlock``.
+Everything below describing the dual-stream / EMD ordinal / Sinkhorn design refers to the
+deprecated v2 ``PhenoHER2`` class only.
+
 Changes vs v1:
     1. Dual-stream architecture:
         - Detail stream: vanilla AB-MIL attention over patches -> s_detail
@@ -69,6 +78,9 @@ class GatedAttention(nn.Module):
     """Per-prototype gated attention over patches (Ilse 2018, multi-head).
 
     For num_prototypes == 1 this collapses to vanilla AB-MIL.
+
+    [REUSED BY THE REPORTED MODEL] ``PhenoHER2Binary`` imports this block; it is an
+    active component of the reported pipeline (unlike the ``PhenoHER2`` class below).
     """
 
     def __init__(self, hidden_dim: int, attn_hidden_dim: int, num_prototypes: int, dropout: float):
@@ -90,7 +102,11 @@ class GatedAttention(nn.Module):
 
 
 class SimpleSpatialBlock(nn.Module):
-    """Optional local-context block over the N patch tokens."""
+    """Optional local-context block over the N patch tokens.
+
+    [REUSED BY THE REPORTED MODEL] Importable building block; only instantiated when
+    ``use_spatial_block=True`` (off in the reported runs, but the class itself is shared).
+    """
 
     def __init__(self, hidden_dim: int, n_heads: int, dropout: float):
         super().__init__()
@@ -122,7 +138,13 @@ class SimpleSpatialBlock(nn.Module):
 
 
 class PhenoHER2(nn.Module):
-    """Phenotype-aware Ordinal MIL for HER2 scoring (4-class), v2."""
+    """[DEPRECATED — superseded v2 4-class model; NOT used for the reported results.]
+
+    The reported binary / 3-class results come from ``PhenoHER2Binary``
+    (``phenotype_mil_binary.py``). This class is retained for reference only.
+
+    Phenotype-aware Ordinal MIL for HER2 scoring (4-class), v2.
+    """
 
     def __init__(self, cfg: PhenoHER2Config):
         super().__init__()
