@@ -76,7 +76,7 @@ This populates `herohe/gp2/vendor/{AttentionDeepMIL,TransMIL,DeepAttnMISL}`,
 We do **not** redistribute the HEROHE images or labels.
 
 1. Request the HEROHE WSIs and ground-truth labels from the challenge
-   organizers. Place the MIRAX slides where the run scripts expect them
+   organizers or you can find it on the Google Drive shared by the organizers as well. Place the MIRAX slides where the run scripts expect them
    (`herohe/wsi_test/` for the official 150-slide test set; training case folders
    at the repository root) and the label files alongside (e.g.
    `herohe/Training (ground truth).csv`, `herohe/Test (ground truth).xlsx`).
