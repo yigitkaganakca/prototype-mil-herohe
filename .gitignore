@@ -1,0 +1,50 @@
+# ----- Raw WSI data (never committed) -----
+*.mrxs
+*.MRXS
+wsi_test/
+
+# ----- External repositories fetched by setup_vendor.sh -----
+CLAM-master/
+CLAM/
+TRIDENT/
+herohe/gp2/vendor/AttentionDeepMIL/
+herohe/gp2/vendor/DeepAttnMISL/
+herohe/gp2/vendor/TransMIL/
+
+# ----- Generated artifacts (regeneratable) -----
+features_*/
+results_*/
+runs/
+herohe/gp2/runs/
+herohe/gp2/data/
+*.h5
+*.pt
+*.ckpt
+*.pth
+*.safetensors
+
+# ----- Logs / scratch -----
+*.log
+*.tmp
+.cache/
+.DS_Store
+Thumbs.db
+
+# ----- Python -----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# ----- Editor / IDE -----
+.vscode/
+.idea/
+*.swp

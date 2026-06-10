@@ -1,0 +1,29 @@
+# Python dependencies for the prototype-guided multi-head MIL pipeline.
+# Versions pinned to the environment used for the reported results.
+
+torch==2.11.0
+torchvision==0.26.0
+numpy==2.2.6
+pandas==2.3.3
+scipy==1.15.3
+scikit-learn==1.7.2
+matplotlib==3.10.9
+seaborn==0.13.2
+pillow==12.2.0
+opencv-python==4.13.0.92
+h5py==3.16.0
+openslide-python==1.4.3
+geopandas==1.1.3
+einops==0.8.2
+timm==0.9.16
+tqdm==4.67.3
+
+# Required by the upstream TransMIL baseline (Nystrom attention blocks).
+nystrom-attention==0.0.14
+
+# NOTE: openslide-python additionally requires the native OpenSlide library
+#   macOS:  brew install openslide
+#   Ubuntu: apt-get install openslide-tools
+#
+# Feature extraction (TRIDENT / Virchow2) and the CLAM preprocessing/baseline
+# are external repositories, not PyPI packages. See setup_vendor.sh and README.md.
