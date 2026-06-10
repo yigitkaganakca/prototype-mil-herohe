@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # TRIDENT: seg -> coords -> Virchow2 features for official HEROHE test (150 slides).
-# Prerequisite: herohe/gp2/scripts/verify_wsi_test_mirax.py exits 0
 set -euo pipefail
 
 REPO="${REPO:-$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/../../.." && pwd)}"
@@ -10,19 +9,13 @@ JOB="$REPO/herohe/gp2/results_trident_test"
 LIST="$REPO/herohe/gp2/data/wsi_list_test_150.csv"
 TRIDENT="$REPO/TRIDENT"
 LOG="$REPO/herohe/gp2/data/trident_test_150.log"
-# Source of the official HEROHE test WSIs (obtain from the challenge organizers).
-# Set GC_TEST to that directory before running, e.g. GC_TEST=/path/to/HEROHE/Test
-GC_TEST="${GC_TEST:-}"
+# Obtain the official HEROHE test WSIs from the challenge organizers and place them
+# under "$WSIDIR" before running.
 
 mkdir -p "$JOB"
 exec > >(tee -a "$LOG") 2>&1
 
-echo "========== $(date) TRIDENT test 150: preflight =========="
-"$PY" "$REPO/herohe/gp2/scripts/verify_wsi_test_mirax.py" \
-  --wsi_dir "$WSIDIR" \
-  --ref_dir "$GC_TEST" \
-  --out_json "$REPO/herohe/gp2/data/wsi_test_mirax_verify.json"
-
+echo "========== $(date) TRIDENT test 150 =========="
 cd "$TRIDENT"
 
 echo "[$(date '+%F %T')] === SEG (otsu) test 150 ==="

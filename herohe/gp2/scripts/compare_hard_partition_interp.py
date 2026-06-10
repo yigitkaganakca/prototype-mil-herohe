@@ -128,12 +128,6 @@ def main():
         model = load_model(ckpt, dev)
         results[name] = {"checkpoint": str(ckpt), **score_slide(model, feat)}
 
-    attnmisl_scan = _REPO / "herohe/gp2/data/attnmisl_interp_scan_fold0_test.json"
-    if attnmisl_scan.is_file():
-        att = json.loads(attnmisl_scan.read_text())
-        if att.get("slide303"):
-            results["attnmisl_ent0_fold0"] = att["slide303"]
-
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(results, indent=2))
     print(json.dumps(results, indent=2))

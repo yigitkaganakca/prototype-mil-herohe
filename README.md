@@ -124,9 +124,7 @@ bash herohe/gp2/scripts/run_hard_partition_5fold_all.sh        # binary + 3-clas
 
 # MIL baselines (binary + three-class)
 bash herohe/gp2/scripts/run_binary_baselines_5fold_s42.sh all       # ABMIL/CLAM/TransMIL
-bash herohe/gp2/scripts/run_attnmisl_binary_5fold_s42.sh all
 bash herohe/gp2/scripts/run_threeclass_5fold_s42.sh all
-bash herohe/gp2/scripts/run_attnmisl_threeclass_5fold_s42.sh all
 ```
 
 **4. Ablations.**
