@@ -1,6 +1,6 @@
 """Train PhenoHER2-Binary on Virchow2 bags: HEROHE ISH label (Negative vs Positive).
 
-Uses the same fold protocol as ``train_phenotype_mil.py`` (optional ``folds_v1.csv``).
+Uses the project-wide 5-fold protocol (optional ``folds_v1.csv``).
 Labels come from ``Final Result (Ground truth)`` via ``HerohePatchBagDataset(...,
 label_mode="gt_binary")``.
 

@@ -154,7 +154,7 @@ def main():
     ap.add_argument("--wsi_path", type=Path, default=None, help="Override WSI path for this slide")
     ap.add_argument("--top_m", type=int, default=8, help="Top patches per prototype (columns)")
     ap.add_argument("--thumb", type=int, default=256, help="Each tile size after resize (px)")
-    ap.add_argument("--max_patches", type=int, default=4096, help="Match train_phenotype_mil / train_phenobin_mil")
+    ap.add_argument("--max_patches", type=int, default=4096, help="Match train_phenobin_mil")
     ap.add_argument("--seed", type=int, default=None, help="Subsampling seed (default: from checkpoint args['seed'] if present, else 0)")
     ap.add_argument("--out_dir", type=Path, required=True)
     ap.add_argument("--device", default="cpu")

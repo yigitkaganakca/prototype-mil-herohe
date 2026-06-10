@@ -1,6 +1,6 @@
 """Train AB-MIL, CLAM-MB, or TransMIL on Virchow2 (or ResNet50) feature bags — 2-class or 4-class.
 
-Uses the same ``HerohePatchBagDataset`` protocol as ``train_phenotype_mil.py`` / ``train_clam_baseline.py``:
+Uses the same ``HerohePatchBagDataset`` protocol as ``train_phenobin_mil.py``:
 ``--folds_csv`` with ``slide_id``, ``fold``, optional ``StratifiedKFold`` on labels.
 
 Aggregators
