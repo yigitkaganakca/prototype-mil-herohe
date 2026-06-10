@@ -9,11 +9,16 @@ Stage 2 (``--stage2_method``): condense pooled stage-1 exemplars into the global
 prototype set — either ``kmeans`` (exactly K = ``--target_L`` centers) or ``ap`` (a
 second AP pass, data-driven L).
 
-REPORTED RESULTS: the run scripts always pass ``--stage2_method kmeans --target_L L``
-(L = 8 primary; L ∈ {4, 8, 16} for the prototype-count ablation). So the prototypes
-used for the reported tables are Stage-1 AP → Stage-2 MiniBatchKMeans(K = L). The
-``ap`` stage-2 path is the PhiHER2-faithful variant, retained for reference but not
-used for the reported numbers. (The CLI default is ``ap``; the run scripts override it.)
+REPORTED RESULTS: this script always runs with ``--stage2_method kmeans --target_L L``
+(L = 8 primary; L ∈ {4, 16} for the prototype-count ablation), producing Stage-1 AP →
+Stage-2 MiniBatchKMeans(K = L) *centroids*. These centroids are an intermediate: the
+reported Virchow2 model uses ``make_medoid_prototypes.py`` to replace each averaged
+centroid with its nearest real exemplar (a **real-patch medoid**) before training. Pass
+``--cache_stage2_pool`` so that medoid step can reuse the pooled exemplars. The ResNet-50
+encoder ablation is the exception — it trains directly on these k-means centroids (no
+medoid snap). The ``ap`` stage-2 path is the PhiHER2-faithful variant, retained for
+reference but not used for the reported numbers. (The CLI default is ``ap``; the run
+scripts override it.)
 
 Run on **training slides only** (single CSV or one CV fold's train split). Output .pt
 is loaded by ``train_phenobin_mil.py --prototypes``; prototypes are frozen by default

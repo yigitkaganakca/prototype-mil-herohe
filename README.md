@@ -121,39 +121,69 @@ bash herohe/gp2/scripts/run_trident_test_150.sh    # official 150-slide test set
 bash herohe/gp2/scripts/run_trident_resnet50_feat.sh
 ```
 
-**2. Prototype construction (per-slide affinity propagation + k-means condensation).**
+**2. Prototype construction (per-slide affinity propagation → k-means → real-patch medoids).**
 
-Stage 1 runs affinity propagation on each training slide's patches (real-patch
-medoids); stage 2 condenses the pooled exemplars to exactly `L` global prototypes. The
-reported runs use k-means for stage 2 (`--stage2_method kmeans --target_L L`).
+Per fold, on the training patches only: stage 1 runs affinity propagation on each
+slide's patches; stage 2 pools the stage-1 exemplars and condenses them to exactly `L`
+global k-means centroids. The reported model does **not** use the *averaged* centroids —
+each centroid is snapped to its nearest real pooled exemplar, giving `L` **real-patch
+medoid** prototypes (inspectable H&E patches, mutually more distinct than the averaged
+centroids). Build both stages for every fold and for each prototype count (`L = 8`
+primary; `L ∈ {4, 16}` for the count ablation):
 
 ```bash
-python herohe/gp2/scripts/init_prototypes_ap.py \
-    --features_dir <features_virchow2> \
-    --folds_csv herohe/gp2/data/folds_phiher2_binary_s42.csv \
-    --val_fold 0 --stage2_method kmeans --target_L 8 \
-    --output herohe/gp2/data/prototypes_ap_phiher2fold_fold0_train_L8.pt
+FEAT=<features_virchow2>
+FOLDS=herohe/gp2/data/folds_phiher2_binary_s42.csv
+
+# (a) AP + k-means centroids, caching the pooled stage-1 exemplars for the medoid step.
+for F in 0 1 2 3 4; do
+  python herohe/gp2/scripts/init_prototypes_ap.py \
+      --features_dir "$FEAT" --folds_csv "$FOLDS" --val_fold $F \
+      --stage2_method kmeans --target_L 8 \
+      --cache_stage2_pool herohe/gp2/data/ap_stage2_pool_fold${F}_train.npy \
+      --output herohe/gp2/data/prototypes_ap_phiher2fold_fold${F}_train_L8.pt
+  for L in 4 16; do   # count-ablation L values reuse the cached pool (skip stage 1)
+    python herohe/gp2/scripts/init_prototypes_ap.py \
+        --features_dir "$FEAT" --folds_csv "$FOLDS" --val_fold $F \
+        --stage2_method kmeans --target_L $L \
+        --reuse_stage2_pool herohe/gp2/data/ap_stage2_pool_fold${F}_train.npy \
+        --output herohe/gp2/data/prototypes_ap_phiher2fold_fold${F}_train_L${L}.pt
+  done
+done
+
+# (b) Snap each centroid to its nearest real exemplar → real-patch medoid prototypes.
+python herohe/gp2/scripts/make_medoid_prototypes.py --L 8 4 16 --folds 0 1 2 3 4
 ```
+
+The ResNet-50 encoder ablation builds its own AP + k-means prototypes from ResNet-50
+features inside its run script (step 4); it does not use the medoid snap.
 
 **3. Train + test-ensemble eval (5-fold CV).**
 
 ```bash
-# Our model (hard-partition routing, token-level ABMIL readout) — primary config
-bash herohe/gp2/scripts/run_khead_token_abmil_hard_partition_ent0.sh all
-bash herohe/gp2/scripts/run_hard_partition_5fold_all.sh        # binary + 3-class
+# Our model — PRIMARY binary config (hard-partition routing, token-level ABMIL readout,
+# L=8, real-patch medoid prototypes). Behind the headline binary numbers.
+bash herohe/gp2/scripts/run_medoid_primary_binary.sh all
 
 # MIL baselines (binary + three-class)
 bash herohe/gp2/scripts/run_binary_baselines_5fold_s42.sh all       # ABMIL/CLAM/TransMIL
 bash herohe/gp2/scripts/run_threeclass_5fold_s42.sh all
 ```
 
-**4. Ablations.**
+**4. Ablations and three-class (our model).**
+
+`run_medoid_benchmark.sh` trains every remaining reported config of our model under the
+*same* primary recipe (medoid prototypes throughout), varying only routing / readout /
+`L` / task: the binary readout & routing ablations (mean, concat, independent), the
+prototype-count ablation (`L ∈ {4, 16}`), the **three-class** headline (`tri_hard_token_L8`)
+and its ablations.
 
 ```bash
-bash herohe/gp2/scripts/run_khead_pool_ablation.sh                       # readout (mean/concat/ABMIL)
-bash herohe/gp2/scripts/run_khead_hard_partition_token_abmil_k_ablation.sh   # number of prototypes
-bash herohe/gp2/scripts/run_resnet50_binary_5fold_s42.sh all             # encoder ablation
-bash herohe/gp2/scripts/run_khead_token_abmil_hard_partition_ent0_resnet50.sh all
+bash herohe/gp2/scripts/run_medoid_benchmark.sh                 # readout/routing/L + three-class
+
+# Encoder ablation (ResNet-50 features; AP + k-means prototypes, no medoid snap):
+bash herohe/gp2/scripts/run_resnet50_binary_5fold_s42.sh all                  # ABMIL/CLAM/TransMIL on ResNet-50
+bash herohe/gp2/scripts/run_khead_token_abmil_hard_partition_ent0_resnet50.sh all  # our model on ResNet-50
 ```
 
 **5. Metrics and uncertainty.**
