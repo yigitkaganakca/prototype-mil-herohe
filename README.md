@@ -92,6 +92,26 @@ All steps below have a ready-made driver in `herohe/gp2/scripts/`. Each driver
 encodes the exact hyperparameters used for the paper; pass `--help` to the
 underlying `.py` entry points to see every flag.
 
+**0. Data preparation (WSI list + stratified CV folds).**
+
+Build the WSI list that the TRIDENT drivers consume (`--custom_list_of_wsis`),
+and the deterministic 5-fold split that every training driver reads
+(`herohe/gp2/data/folds_phiher2_binary_s42.csv`). Both derive from the HEROHE
+labels/slides, so they are generated locally rather than shipped (build the test
+list the same way against the 150-slide test set → `wsi_list_test_150.csv`).
+
+```bash
+python herohe/gp2/scripts/build_herohe_manifest.py \
+    --labels_csv "herohe/Training (ground truth).csv" \
+    --slides_root herohe --output_csv herohe/gp2/data/wsi_list_full.csv
+
+# After features exist (step 1), build the seed-42 folds used by every driver:
+python herohe/gp2/scripts/make_folds.py \
+    --labels_csv "herohe/Training (ground truth).csv" \
+    --features_dir <features_virchow2> --stratify binary --n_folds 5 --seed 42 \
+    --out_csv herohe/gp2/data/folds_phiher2_binary_s42.csv
+```
+
 **1. Patch features (TRIDENT → Virchow2, 20× / 256 px).**
 
 ```bash
@@ -136,16 +156,17 @@ bash herohe/gp2/scripts/run_resnet50_binary_5fold_s42.sh all             # encod
 bash herohe/gp2/scripts/run_khead_token_abmil_hard_partition_ent0_resnet50.sh all
 ```
 
-**5. Metrics, uncertainty, and figures.**
+**5. Metrics and uncertainty.**
 
 ```bash
 python herohe/gp2/scripts/compute_uncertainty.py     # bootstrap CIs, DeLong, ECE, Brier
 python herohe/gp2/scripts/recompute_report_stats.py
-bash   herohe/gp2/scripts/run_architecture_figures.sh
 ```
 
 The metrics behind the reported tables are checked in at
-`herohe/gp2/results/all_metrics.json`.
+`herohe/gp2/results/all_metrics.json`. This repository ships the reproduction
+pipeline only; the figure-generation scripts used to render the report plots are
+not included.
 
 ---
 
