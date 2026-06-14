@@ -9,8 +9,13 @@ We evaluate it on binary HER2 (negative vs. positive) and three-class HER2
 stratification (negative / low / positive), against ABMIL, CLAM, TransMIL and
 DeepAttnMISL baselines under a unified 5-fold CV + test-ensemble protocol.
 
-This repository contains the **code only**. Whole-slide images, extracted
-features, and trained checkpoints are not distributed (see *Data* below).
+This repository contains the **reproduction code** and the **final project report**
+([`report.pdf`](report.pdf)). Whole-slide images, extracted features, and trained
+checkpoints are not distributed (see *Data* below).
+
+**Report:** [`report.pdf`](report.pdf) — full senior design report (compiled from the LaTeX
+sources in the private development workspace). The poster QR code should point to  
+`https://github.com/yigitkaganakca/prototype-mil-herohe/blob/main/report.pdf`.
 
 ---
 
@@ -21,6 +26,7 @@ features, and trained checkpoints are not distributed (see *Data* below).
 ├── requirements.txt              # pinned Python dependencies
 ├── setup_vendor.sh               # clones the baseline repos at pinned commits
 ├── README.md
+├── report.pdf                    # final project report (PDF)
 └── herohe/gp2/
     ├── configs/                  # preprocessing (segmentation/patching) configs
     ├── models/                   # our model + baseline model definitions
