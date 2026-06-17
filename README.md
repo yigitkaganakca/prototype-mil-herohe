@@ -171,9 +171,9 @@ features inside its run script (step 4); it does not use the medoid snap.
 # L=8, real-patch medoid prototypes). Behind the headline binary numbers.
 bash herohe/gp2/scripts/run_medoid_primary_binary.sh all
 
-# MIL baselines (binary + three-class)
-bash herohe/gp2/scripts/run_binary_baselines_5fold_s42.sh all       # ABMIL/CLAM/TransMIL
-bash herohe/gp2/scripts/run_threeclass_5fold_s42.sh all
+# MIL baselines (ABMIL / CLAM / TransMIL — binary and three-class)
+bash herohe/gp2/scripts/run_baselines_5fold_s42.sh binary all
+bash herohe/gp2/scripts/run_baselines_5fold_s42.sh threeclass all
 ```
 
 **4. Ablations and three-class (our model).**
